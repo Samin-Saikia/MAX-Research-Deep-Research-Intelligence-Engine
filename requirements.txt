@@ -1,0 +1,9 @@
+flask
+groq
+python-dotenv
+python-docx
+PyPDF2
+markdown
+beautifulsoup4
+requests
+fpdf2
