@@ -11,7 +11,7 @@ The reason it uses **Groq/Compound** specifically is that it's not just a langua
 ## Interface Preview
 
 <p align="center">
-ui
+interface
   <img src="assets/Screenshot_15.png" alt="MAXUS 
   Interface" width="900"/>
   Doc crux
@@ -267,5 +267,6 @@ Built as an experimental research project exploring multi-agent software develop
 
 ## License
 
-MIT#   M A X - R e s e a r c h - D e e p - R e s e a r c h - I n t e l l i g e n c e - E n g i n e  
+MIT#   M A X - R e s e a r c h - D e e p - R e s e a r c h - I n t e l l i g e n c e - E n g i n e 
+ 
  
