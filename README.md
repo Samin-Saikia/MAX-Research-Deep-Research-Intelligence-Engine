@@ -8,8 +8,6 @@ MAX Research is designed for deep, structured analysis. It isn’t a conversatio
 The system is powered by **Groq’s Compound model**, which goes beyond a standard language model. It combines **GPT‑OSS** reasoning with autonomous web search tool calls. When you request research, the model doesn’t rely solely on its training data — it actively browses the web, gathers current information, and integrates it into the final report. This dramatically improves accuracy and relevance for topics that are recent, rapidly evolving, or data-dependent.
 
 ---
-
----
 ## Interface Preview
 
 <p align="center">
