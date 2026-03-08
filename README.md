@@ -7,22 +7,7 @@ MAX Research is purpose-built for depth. It's not a chatbot you have a conversat
 The reason it uses **Groq/Compound** specifically is that it's not just a language model — it's an agentic model that combines GPT-OSS with autonomous web search tool calls. So when you ask it to research something, it doesn't just reason from training data — it actually goes out and browses the web, pulls in current information, and incorporates it into the report. This makes a dramatic difference in accuracy for anything recent or fast-moving.
 
 ---
----
-## Interface Preview
 
-<p align="center">
-interface
-  <img src="assets/Screenshot_15.png" alt="MAXUS 
-  Interface" width="900"/>
-  Doc crux
-  <img src="assets/Screenshot_16.png" alt="MAXUS 
-  Interface" width="900"/>
-  Deep research
-  <img src="assets/Screenshot_17.png" alt="MAXUS 
-  Interface" width="900"/>
-</p>
-
----
 ## Workflow
 
 ```
