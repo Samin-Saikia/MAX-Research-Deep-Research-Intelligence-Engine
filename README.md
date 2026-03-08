@@ -8,6 +8,23 @@ The reason it uses **Groq/Compound** specifically is that it's not just a langua
 
 ---
 
+---
+## Interface Preview
+
+<p align="center">
+interface
+  <img src="assets/Screenshot_15.png" alt="MAXUS 
+  Interface" width="900"/>
+  Doc crux
+  <img src="assets/Screenshot_16.png" alt="MAXUS 
+  Interface" width="900"/>
+  Deep research
+  <img src="assets/Screenshot_17.png" alt="MAXUS 
+  Interface" width="900"/>
+</p>
+
+---
+
 ## Workflow
 
 ```
