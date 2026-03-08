@@ -23,32 +23,6 @@ interface
 </p>
 
 ---
-## Workflow
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  ⚡ NEXUS RESEARCH           ● Powered by Groq · Compound Beta      │
-├──────────────────────┬──────────────────────────────────────────────┤
-│  Analysis Mode       │  [DEEP RESEARCH]          ↓MD ↓TXT ↓PDF ↓DOCX│
-│  ┌────┐ ┌────┐       │                                              │
-│  │ 📡 │ │ 🧬 │       │  ## Executive Summary                        │
-│  │Deep│ │Crux│       │  Quantum computing represents a fundamental  │
-│  └────┘ └────┘       │  shift in computational paradigms...         │
-│  ┌────┐ ┌────┐       │                                              │
-│  │ ⚡ │ │ 🎯 │       │  ## Historical Context                       │
-│  │Docs│ │Cust│       │  The theoretical foundations were laid by... │
-│  └────┘ └────┘       │                                              │
-│                      │  ```python                                    │
-│  Topic / Query       │  from qiskit import QuantumCircuit           │
-│  ┌──────────────┐    │  qc = QuantumCircuit(2, 2)                   │
-│  │              │    │  ```                                          │
-│  └──────────────┘    │                                              │
-│  [ ⚡ Analyze Now ]  │  Words: 3,241 · Sections: 9 · Time: 12.4s   │
-└──────────────────────┴──────────────────────────────────────────────┘
-```
-
----
-
 ## Why MAX Research?
 
 Most AI tools give you a chatbot. MAX Research gives you a research assistant. The difference is:
