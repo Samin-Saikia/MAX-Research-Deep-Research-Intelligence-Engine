@@ -1,4 +1,3 @@
-<<<<<<< HEAD:readme.md
 # ⚡ MAX Research — Deep Intelligence Engine
 
 > A locally-hosted AI research agent that autonomously browses, reads, and synthesizes information into comprehensive reports — powered by Groq/Compound.
@@ -541,10 +540,3 @@ Python Developer focused on backend systems, AI agents, and practical software t
 Built as an experimental research project exploring multi-agent software development pipelines.
 
 ---
-
-## License
-
-MIT#   M A X - R e s e a r c h - D e e p - R e s e a r c h - I n t e l l i g e n c e - E n g i n e 
- 
-
- 
