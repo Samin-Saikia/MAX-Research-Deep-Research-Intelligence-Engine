@@ -442,7 +442,7 @@ class MinimalPDF(object):
             pages_kids, len(self._pages)))
 
         # 3 — Info
-        write_obj(3, '<< /Producer (Nexus Research) >>')
+        write_obj(3, '<< /Producer (MAX-Research) >>')
 
         # 4-7 — Fonts
         for num, alias, fname in fonts:
