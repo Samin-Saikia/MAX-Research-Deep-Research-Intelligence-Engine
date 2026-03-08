@@ -518,7 +518,7 @@ Make sure you're uploading the actual paper PDF rather than just typing a title.
 
 | Layer | Technology |
 |---|---|
-| LLM | Groq `compound-beta` — Llama 3.3 70B + autonomous web search |
+| LLM | Groq `groq/compound` — GPT-OSS + autonomous web search |
 | Backend | Flask 2.x, python-docx, PyPDF2, python-dotenv |
 | Streaming | Flask SSE via `stream_with_context` |
 | Frontend | Vanilla JS — no framework, no build step |
