@@ -1,5 +1,6 @@
 # ⚡ MAX Research — Deep Intelligence Engine
 
+
 > A locally-hosted AI research agent that autonomously browses, reads, and synthesizes information into comprehensive reports — powered by Groq/Compound.
 
 MAX Research is purpose-built for depth. It's not a chatbot you have a conversation with — you give it a topic or a document, and it produces a thorough, well-structured analysis. Each of the four modes has a specialized system prompt engineered to extract a specific kind of insight. Reports stream token-by-token with live markdown rendering, syntax-highlighted code blocks, and real-time word count.
