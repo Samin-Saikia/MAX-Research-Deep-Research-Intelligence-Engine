@@ -1,13 +1,11 @@
-# ⚡ MAX Research — Deep Intelligence Engine
+# ⚡ MAX Research — Deep Research Intelligence Engine
 
 
-> A locally-hosted AI research agent that autonomously browses, reads, and synthesizes information into comprehensive reports — powered by Groq/Compound.
+> 4-mode AI research engine — deep research with live web search, paper crux extraction, docs simplification, and custom analysis. Reads PDF, DOCX, TXT, MD. Exports to all formats. Powered by Groq/Compound
 
-MAX Research is purpose-built for depth. It's not a chatbot you have a conversation with — you give it a topic or a document, and it produces a thorough, well-structured analysis. Each of the four modes has a specialized system prompt engineered to extract a specific kind of insight. Reports stream token-by-token with live markdown rendering, syntax-highlighted code blocks, and real-time word count.
+MAX Research is designed for deep, structured analysis. It isn’t a conversational chatbot — you provide a topic or document, and the system generates a comprehensive, well-organized report. It have four analysis modes and each of the four is driven by a specialized system prompt engineered to extract a specific type of insight. Reports stream in real time, rendering markdown as it’s generated, with syntax-highlighted code blocks and a live word count.
 
-The reason it uses **Groq/Compound** specifically is that it's not just a language model — it's an agentic model that combines GPT-OSS with autonomous web search tool calls. So when you ask it to research something, it doesn't just reason from training data — it actually goes out and browses the web, pulls in current information, and incorporates it into the report. This makes a dramatic difference in accuracy for anything recent or fast-moving.
-
----
+The system is powered by **Groq’s Compound model**, which goes beyond a standard language model. It combines **GPT‑OSS** reasoning with autonomous web search tool calls. When you request research, the model doesn’t rely solely on its training data — it actively browses the web, gathers current information, and integrates it into the final report. This dramatically improves accuracy and relevance for topics that are recent, rapidly evolving, or data-dependent.
 
 ---
 ## Interface Preview
