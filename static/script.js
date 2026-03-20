@@ -1,286 +1,405 @@
-  // ── STATE ──
-  let currentMode = 'deep_research';
-  let currentContent = '';
-  let currentTitle = '';
-  let history = JSON.parse(localStorage.getItem('nexus_history') || '[]');
-  let startTime = 0;
-  let timerInterval = null;
+const MODES = window.MODES;
+let currentMode = 'deep_research';
+let fullContent = '';
+let currentTitle = '';
+let startTime = 0;
+let sourceCount = 0;
+let statsInterval = null;
 
-  // ── INIT ──
-  renderHistory();
+// ── Init ────────────────────────────────────────────────────────────────────
 
-  // ── MODE SELECTION ──
-  function selectMode(btn) {
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentMode = btn.dataset.mode;
+document.addEventListener('DOMContentLoaded', function() {
+  renderModes();
+  loadHistory();
+  checkSearchStatus();
+  document.getElementById('submit-btn').innerHTML = '<span>⚡</span> Analyze Now';
+  document.getElementById('submit-btn').addEventListener('click', submitResearch);
+  document.getElementById('tab-rendered').addEventListener('click', () => switchTab('rendered'));
+  document.getElementById('tab-raw').addEventListener('click', () => switchTab('raw'));
+  document.getElementById('copy-btn').addEventListener('click', copyContent);
+  document.querySelectorAll('.export-btn').forEach(btn => {
+    btn.addEventListener('click', () => exportReport(btn.dataset.fmt));
+  });
+  document.getElementById('topic-input').addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submitResearch();
+  });
 
-    const badgeMap = {
-      deep_research: ['badge-research', 'DEEP RESEARCH'],
-      paper_crux: ['badge-paper', 'PAPER CRUX'],
-      docs_simplifier: ['badge-docs', 'DOCS SIMPLIFIER'],
-      custom: ['badge-custom', 'CUSTOM ANALYSIS']
-    };
-    const [cls, text] = badgeMap[currentMode];
-    const badge = document.getElementById('modeBadge');
-    badge.className = `output-badge ${cls}`;
-    badge.textContent = text;
-
-    document.getElementById('customGroup').style.display = currentMode === 'custom' ? 'block' : 'none';
-
-    const placeholders = {
-      deep_research: 'e.g. The complete landscape of large language models and their societal impact...',
-      paper_crux: 'Paste paper title/abstract here, or upload the PDF below...',
-      docs_simplifier: 'Paste documentation, API reference, or upload a guide...',
-      custom: 'Enter your topic here...'
-    };
-    document.getElementById('topicInput').placeholder = placeholders[currentMode];
-  }
-
-  // ── FILE HANDLING ──
-  function handleFileSelect(input) {
-    const file = input.files[0];
-    if (file) {
-      document.getElementById('fileName').textContent = file.name;
-      document.getElementById('fileSelected').style.display = 'block';
-      document.querySelector('.file-drop-icon').textContent = '✅';
+  const fileInput = document.getElementById('file-input');
+  fileInput.addEventListener('change', function() {
+    if (this.files[0]) {
+      const fn = document.getElementById('file-name');
+      fn.textContent = '📎 ' + this.files[0].name;
+      fn.style.display = 'block';
     }
-  }
+  });
 
-  const fileDrop = document.getElementById('fileDrop');
-  fileDrop.addEventListener('dragover', (e) => { e.preventDefault(); fileDrop.classList.add('drag-over'); });
-  fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('drag-over'));
-  fileDrop.addEventListener('drop', (e) => {
+  const fileDrop = document.getElementById('file-drop');
+  fileDrop.addEventListener('dragover', function(e) {
     e.preventDefault();
-    fileDrop.classList.remove('drag-over');
+    this.classList.add('drag-over');
+  });
+  fileDrop.addEventListener('dragleave', function() {
+    this.classList.remove('drag-over');
+  });
+  fileDrop.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
     if (file) {
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      document.getElementById('fileInput').files = dt.files;
-      handleFileSelect(document.getElementById('fileInput'));
+      fileInput.files = e.dataTransfer.files;
+      const fn = document.getElementById('file-name');
+      fn.textContent = '📎 ' + file.name;
+      fn.style.display = 'block';
     }
   });
+});
 
-  // ── RESEARCH ──
-  async function startResearch() {
-    const topic = document.getElementById('topicInput').value.trim();
-    const file = document.getElementById('fileInput').files[0];
-    const customInstruction = document.getElementById('customInstruction').value.trim();
-
-    if (!topic && !file) {
-      showToast('Please enter a topic or upload a file', 'error');
-      return;
+async function checkSearchStatus() {
+  try {
+    const r = await fetch('/api/search-status');
+    const d = await r.json();
+    const badge = document.getElementById('search-badge');
+    const text = document.getElementById('search-badge-text');
+    if (d.serper_enabled) {
+      badge.className = 'search-badge active';
+      text.textContent = 'Web Search Active';
+    } else {
+      badge.className = 'search-badge inactive';
+      text.textContent = 'No Web Search';
     }
+  } catch(e) {}
+}
 
-    const btn = document.getElementById('analyzeBtn');
-    btn.disabled = true;
-    btn.classList.add('loading');
+// ── Mode Rendering ──────────────────────────────────────────────────────────
 
-    document.getElementById('emptyState').style.display = 'none';
-    document.getElementById('resultCard').classList.remove('visible');
-    document.getElementById('exportBar').style.display = 'none';
-    document.getElementById('progressWrap').classList.add('active');
+const modeIcons = {
+  deep_research: '📡',
+  paper_crux: '🧬',
+  docs_simplifier: '⚡',
+  custom: '🎯'
+};
 
-    currentContent = '';
-    currentTitle = topic || (file ? file.name : 'Analysis');
-    document.getElementById('outputTitle').textContent = currentTitle;
-
-    startTime = Date.now();
-    updateTimer();
-    timerInterval = setInterval(updateTimer, 500);
-
-    try {
-      const formData = new FormData();
-      formData.append('mode', currentMode);
-      formData.append('topic', topic);
-      if (customInstruction) formData.append('custom_instruction', customInstruction);
-      if (file) formData.append('file', file);
-
-      const response = await fetch('/api/research/stream', { method: 'POST', body: formData });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Request failed');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      document.getElementById('resultCard').classList.add('visible');
-      document.getElementById('renderedContent').innerHTML = '<span class="streaming-cursor"></span>';
-      document.getElementById('rawContent').textContent = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop();
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === 'chunk') {
-              currentContent += data.text;
-              renderContent(currentContent, true);
-            } else if (data.type === 'done') {
-              currentContent = data.full_content || currentContent;
-              renderContent(currentContent, false);
-              updateStats(currentContent);
-              saveToHistory(currentTitle, currentMode, currentContent);
-              document.getElementById('exportBar').style.display = 'flex';
-              showToast('Research complete!', 'success');
-            } else if (data.type === 'error') {
-              throw new Error(data.message);
-            }
-          } catch (e) {
-            if (e.message.includes('JSON')) continue;
-            throw e;
-          }
-        }
-      }
-    } catch (err) {
-      showToast(err.message, 'error');
-      document.getElementById('emptyState').style.display = 'flex';
-      document.getElementById('resultCard').classList.remove('visible');
-    } finally {
-      btn.disabled = false;
-      btn.classList.remove('loading');
-      document.getElementById('progressWrap').classList.remove('active');
-      clearInterval(timerInterval);
-      updateTimer();
-    }
+function renderModes() {
+  const container = document.getElementById('mode-list');
+  container.innerHTML = '';
+  for (const [key, mode] of Object.entries(MODES)) {
+    const card = document.createElement('div');
+    card.className = 'mode-card' + (key === currentMode ? ' active' : '');
+    card.dataset.mode = key;
+    card.innerHTML = `
+      <div class="mode-icon">${modeIcons[key] || '📋'}</div>
+      <div class="mode-info">
+        <h4>${mode.name}</h4>
+        <p>${mode.description}</p>
+      </div>`;
+    card.addEventListener('click', () => selectMode(key));
+    container.appendChild(card);
   }
+}
 
-  function updateTimer() {
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    document.getElementById('genTime').textContent = startTime ? `${elapsed}s` : '—';
+function selectMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.mode === mode);
+  });
+  const customWrap = document.getElementById('custom-instruction-wrap');
+  if (mode === 'custom') {
+    customWrap.classList.add('visible');
+  } else {
+    customWrap.classList.remove('visible');
   }
-
-  // ── RENDER ──
-  const renderer = new marked.Renderer();
-  renderer.code = (code, lang) => {
-    const validLang = lang && hljs.getLanguage(lang) ? lang : 'plaintext';
-    const highlighted = hljs.highlight(typeof code === 'object' ? code.text : code, { language: validLang }).value;
-    return `<pre data-lang="${validLang || ''}"><code class="hljs language-${validLang}">${highlighted}</code></pre>`;
+  const placeholders = {
+    deep_research: 'e.g. The geopolitics of rare earth minerals',
+    paper_crux: 'Paste abstract or describe the paper...',
+    docs_simplifier: 'e.g. Docker Compose, React Hooks, Rust ownership...',
+    custom: 'Enter your topic here...'
   };
+  document.getElementById('topic-input').placeholder = placeholders[mode] || 'Enter your topic...';
+}
 
-  marked.setOptions({ renderer, breaks: true, gfm: true });
+// ── Research Submission ──────────────────────────────────────────────────────
 
-  function renderContent(md, streaming) {
-    const rendered = document.getElementById('renderedContent');
-    const raw = document.getElementById('rawContent');
-    const cursor = streaming ? '<span class="streaming-cursor"></span>' : '';
-    rendered.innerHTML = marked.parse(md) + cursor;
-    raw.textContent = md + (streaming ? '█' : '');
+async function submitResearch() {
+  const topic = document.getElementById('topic-input').value.trim();
+  const fileInput = document.getElementById('file-input');
+  const customInstruction = document.getElementById('custom-instruction').value.trim();
 
-    // Scroll to bottom during streaming
-    const body = rendered.closest('.result-body');
-    if (streaming) body.scrollTop = body.scrollHeight;
+  if (!topic && !fileInput.files[0]) {
+    document.getElementById('topic-input').focus();
+    return;
   }
 
-  function updateStats(content) {
-    const words = content.trim().split(/\s+/).length;
-    const sections = (content.match(/^#{1,3} .+/gm) || []).length;
-    document.getElementById('wordCount').textContent = words.toLocaleString();
-    document.getElementById('sectionCount').textContent = sections;
-  }
+  setLoading(true);
+  clearOutput();
+  sourceCount = 0;
+  startTime = Date.now();
+  currentTitle = topic || 'Research Report';
+  fullContent = '';
 
-  // ── TABS ──
-  function switchTab(tab, btn) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('renderedContent').style.display = tab === 'rendered' ? 'block' : 'none';
-    document.getElementById('rawContent').style.display = tab === 'raw' ? 'block' : 'none';
-  }
+  // Reset search pills
+  document.getElementById('search-pills').innerHTML = '';
+  document.getElementById('search-progress').classList.remove('visible');
 
-  // ── EXPORT ──
-  async function exportReport(format) {
-    if (!currentContent) { showToast('Nothing to export', 'error'); return; }
-    try {
-      const res = await fetch('/api/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: currentContent, title: currentTitle, format })
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${currentTitle.slice(0,40)}.${format}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast(`Exported as .${format.toUpperCase()}`, 'success');
-    } catch (e) {
-      showToast(e.message, 'error');
-    }
-  }
+  // Build form data
+  const formData = new FormData();
+  formData.append('mode', currentMode);
+  formData.append('topic', topic);
+  if (customInstruction) formData.append('custom_instruction', customInstruction);
+  if (fileInput.files[0]) formData.append('file', fileInput.files[0]);
 
-  function copyToClipboard() {
-    navigator.clipboard.writeText(currentContent).then(() => showToast('Copied to clipboard!', 'success'));
-  }
+  // Start time updater
+  statsInterval = setInterval(updateTime, 500);
 
-  // ── HISTORY ──
-  function saveToHistory(title, mode, content) {
-    const item = { title, mode, content, date: new Date().toISOString(), words: content.trim().split(/\s+/).length };
-    history.unshift(item);
-    if (history.length > 20) history = history.slice(0, 20);
-    localStorage.setItem('nexus_history', JSON.stringify(history));
-    renderHistory();
-  }
+  const evtSource = new EventSource('/api/research/stream?' + new URLSearchParams({
+    mode: currentMode,
+    topic: topic,
+    custom_instruction: customInstruction
+  }).toString());
 
-  function renderHistory() {
-    const list = document.getElementById('historyList');
-    if (!history.length) {
-      list.innerHTML = '<div class="history-empty">No research history yet</div>';
-      return;
-    }
-    list.innerHTML = history.map((item, i) => `
-      <div class="history-item" onclick="loadHistory(${i})">
-        <div class="history-item-title">${escHtml(item.title)}</div>
-        <div class="history-item-meta">${item.mode.replace('_', ' ').toUpperCase()} · ${item.words.toLocaleString()} words · ${new Date(item.date).toLocaleDateString()}</div>
-      </div>
-    `).join('');
-  }
-
-  function loadHistory(i) {
-    const item = history[i];
-    currentContent = item.content;
-    currentTitle = item.title;
-    document.getElementById('outputTitle').textContent = item.title;
-    document.getElementById('emptyState').style.display = 'none';
-    document.getElementById('resultCard').classList.add('visible');
-    document.getElementById('exportBar').style.display = 'flex';
-    renderContent(item.content, false);
-    updateStats(item.content);
-  }
-
-  function clearHistory() {
-    history = [];
-    localStorage.setItem('nexus_history', '[]');
-    renderHistory();
-    showToast('History cleared', 'success');
-  }
-
-  // ── TOAST ──
-  function showToast(msg, type = '') {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.className = `toast show ${type}`;
-    setTimeout(() => toast.classList.remove('show'), 3000);
-  }
-
-  // ── UTILS ──
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // Enter key shortcut
-  document.getElementById('topicInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) startResearch();
+  // Use fetch for POST with file
+  const response = await fetch('/api/research/stream', {
+    method: 'POST',
+    body: formData
   });
+
+  if (!response.ok) {
+    showError('Request failed: ' + response.status);
+    setLoading(false);
+    return;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const evt = JSON.parse(line.slice(6));
+        handleEvent(evt);
+      } catch(e) {}
+    }
+  }
+
+  clearInterval(statsInterval);
+  setLoading(false);
+  if (fullContent) {
+    document.getElementById('export-bar').classList.add('visible');
+    saveToHistory(currentTitle, currentMode, fullContent);
+    loadHistory();
+  }
+}
+
+function handleEvent(evt) {
+  switch(evt.type) {
+    case 'status':
+      showStatus(evt.message);
+      if (evt.queries) {
+        document.getElementById('search-progress').classList.add('visible');
+        const pills = document.getElementById('search-pills');
+        pills.innerHTML = '';
+        evt.queries.forEach(q => {
+          const pill = document.createElement('div');
+          pill.className = 'search-pill searching';
+          pill.id = 'pill-' + btoa(q).replace(/=/g,'');
+          pill.textContent = q;
+          pills.appendChild(pill);
+        });
+      }
+      break;
+
+    case 'search_done':
+      sourceCount += evt.count;
+      document.getElementById('stat-sources').textContent = sourceCount;
+      // Mark pill as done
+      const pillId = 'pill-' + btoa(evt.query).replace(/=/g,'');
+      const pill = document.getElementById(pillId);
+      if (pill) {
+        pill.className = 'search-pill done';
+        pill.textContent = '✓ ' + evt.query + ' (' + evt.count + ')';
+      }
+      break;
+
+    case 'start':
+      hideStatus();
+      document.getElementById('search-progress').classList.remove('visible');
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('output-body').style.display = 'block';
+      break;
+
+    case 'chunk':
+      fullContent += evt.text;
+      renderOutput(fullContent, true);
+      break;
+
+    case 'done':
+      fullContent = evt.full_content;
+      renderOutput(fullContent, false);
+      updateStats();
+      break;
+
+    case 'error':
+      showError(evt.message);
+      break;
+  }
+}
+
+// ── Output Rendering ─────────────────────────────────────────────────────────
+
+function renderOutput(content, streaming) {
+  marked.setOptions({ highlight: (code, lang) => {
+    if (lang && hljs.getLanguage(lang)) {
+      return hljs.highlight(code, { language: lang }).value;
+    }
+    return hljs.highlightAuto(code).value;
+  }});
+
+  const body = document.getElementById('output-body');
+  body.innerHTML = marked.parse(content) + (streaming ? '<span class="cursor"></span>' : '');
+
+  // Re-apply highlight.js
+  body.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+
+  // Auto-scroll
+  const container = document.querySelector('.output-container');
+  container.scrollTop = container.scrollHeight;
+
+  // Raw
+  document.getElementById('output-raw-content').textContent = content;
+
+  updateStats();
+}
+
+function updateStats() {
+  const words = fullContent.trim().split(/\s+/).filter(Boolean).length;
+  const sections = (fullContent.match(/^#{1,3} /mg) || []).length;
+  document.getElementById('stat-words').textContent = words.toLocaleString();
+  document.getElementById('stat-sections').textContent = sections;
+}
+
+function updateTime() {
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  document.getElementById('stat-time').textContent = elapsed + 's';
+}
+
+// ── UI Helpers ───────────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  document.getElementById('output-rendered').className = tab === 'rendered' ? 'active' : '';
+  document.getElementById('output-raw').className = tab === 'raw' ? 'active' : '';
+  document.getElementById('tab-rendered').className = 'tab-btn' + (tab === 'rendered' ? ' active' : '');
+  document.getElementById('tab-raw').className = 'tab-btn' + (tab === 'raw' ? ' active' : '');
+}
+
+function clearOutput() {
+  document.getElementById('output-body').innerHTML = '';
+  document.getElementById('output-raw-content').textContent = '';
+  document.getElementById('empty-state').style.display = 'flex';
+  document.getElementById('export-bar').classList.remove('visible');
+  document.getElementById('error-banner').classList.remove('visible');
+  document.getElementById('stat-words').textContent = '0';
+  document.getElementById('stat-sections').textContent = '0';
+  document.getElementById('stat-time').textContent = '—';
+  document.getElementById('stat-sources').textContent = '—';
+}
+
+function setLoading(state) {
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = state;
+  btn.innerHTML = state
+    ? '<span style="display:inline-block;animation:spin .7s linear infinite;border:2px solid #fff3;border-top-color:#fff;border-radius:50%;width:14px;height:14px;"></span> Analyzing...'
+    : '<span>⚡</span> Analyze Now';
+}
+
+function showStatus(msg) {
+  const el = document.getElementById('status-msg');
+  el.classList.remove('hidden');
+  document.getElementById('status-text').textContent = msg;
+}
+
+function hideStatus() {
+  document.getElementById('status-msg').classList.add('hidden');
+}
+
+function showError(msg) {
+  const banner = document.getElementById('error-banner');
+  banner.classList.add('visible');
+  document.getElementById('error-text').textContent = msg;
+  hideStatus();
+}
+
+async function copyContent() {
+  if (!fullContent) return;
+  await navigator.clipboard.writeText(fullContent);
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+
+async function exportReport(format) {
+  if (!fullContent) return;
+  const r = await fetch('/api/export', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ content: fullContent, title: currentTitle, format })
+  });
+  if (r.ok) {
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentTitle.replace(/[^a-z0-9]/gi, '_').slice(0, 50) + '.' + format;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+}
+
+// ── History ──────────────────────────────────────────────────────────────────
+
+function saveToHistory(title, mode, content) {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('max_research_history') || '[]'); } catch(e) {}
+  history.unshift({ title, mode, content, ts: Date.now() });
+  history = history.slice(0, 20);
+  localStorage.setItem('max_research_history', JSON.stringify(history));
+}
+
+function loadHistory() {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem('max_research_history') || '[]'); } catch(e) {}
+  const container = document.getElementById('history-list');
+  container.innerHTML = '';
+  history.forEach((item, idx) => {
+    const el = document.createElement('div');
+    el.className = 'history-item';
+    const ago = timeAgo(item.ts);
+    el.innerHTML = `<h5>${escapeHtml(item.title)}</h5><span>${MODES[item.mode]?.name || item.mode} · ${ago}</span>`;
+    el.addEventListener('click', () => {
+      fullContent = item.content;
+      currentTitle = item.title;
+      document.getElementById('empty-state').style.display = 'none';
+      renderOutput(item.content, false);
+      document.getElementById('export-bar').classList.add('visible');
+    });
+    container.appendChild(el);
+  });
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}

@@ -1,183 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MAX Research — Deep Intelligence Engine</title>
-
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-
-  <!-- Highlight.js -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
-
-  <!-- Marked.js for markdown rendering -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAX Research — Intelligence Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <link rel="stylesheet" href="static\styles.css">
 </head>
 <body>
 
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-<div class="orb orb-3"></div>
-
-<div class="layout">
-  <header>
-    <div class="logo">
-      <div class="logo-icon">🔬</div>
-      <div class="logo-text">
-        <div class="logo-name">MAX RESEARCH</div>
-        <div class="logo-sub">Deep Intelligence Engine</div>
-      </div>
-    </div>
-    <div class="header-status">
-      <div class="status-dot"></div>
-      <span id="statusText">Powered by Groq · groq/compound</span>
-    </div>
-  </header>
-
-  <div class="main-grid">
-    <!-- ── SIDEBAR ── -->
-    <div class="sidebar">
-
-      <!-- Mode Selection -->
-      <div class="card">
-        <div class="card-label">Analysis Mode</div>
-        <div class="mode-grid">
-          <button class="mode-btn active" data-mode="deep_research" onclick="selectMode(this)">
-            <div class="mode-btn-icon">📡</div>
-            <div class="mode-btn-name">Deep Research</div>
-            <div class="mode-btn-desc">Comprehensive multi-source reports</div>
-          </button>
-          <button class="mode-btn" data-mode="paper_crux" onclick="selectMode(this)">
-            <div class="mode-btn-icon">🧬</div>
-            <div class="mode-btn-name">Paper Crux</div>
-            <div class="mode-btn-desc">Research paper synthesis</div>
-          </button>
-          <button class="mode-btn" data-mode="docs_simplifier" onclick="selectMode(this)">
-            <div class="mode-btn-icon">⚡</div>
-            <div class="mode-btn-name">Docs Simplifier</div>
-            <div class="mode-btn-desc">Crisp doc & guide summaries</div>
-          </button>
-          <button class="mode-btn" data-mode="custom" onclick="selectMode(this)">
-            <div class="mode-btn-icon">🎯</div>
-            <div class="mode-btn-name">Custom</div>
-            <div class="mode-btn-desc">Custom analysis prompt</div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Input -->
-      <div class="card">
-        <div class="card-label">Input</div>
-
-        <div class="input-group">
-          <label class="input-label" for="topicInput">Topic / Query</label>
-          <textarea id="topicInput" placeholder="e.g. Quantum computing's impact on cryptography and post-quantum security standards..." rows="4"></textarea>
-        </div>
-
-        <!-- Custom instruction (shown only in custom mode) -->
-        <div class="input-group" id="customGroup" style="display:none">
-          <label class="input-label">Custom Instruction</label>
-          <input type="text" id="customInstruction" placeholder="e.g. Analyze as a venture capitalist...">
-        </div>
-
-        <!-- File upload -->
-        <div class="input-group">
-          <label class="input-label">Upload Document (Optional)</label>
-          <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
-            <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.md" onchange="handleFileSelect(this)">
-            <div class="file-drop-icon">📎</div>
-            <div class="file-drop-text">Drop file or click to browse</div>
-            <div class="file-drop-types">PDF · DOC · DOCX · TXT · MD</div>
-            <div class="file-selected" id="fileSelected">✓ <span id="fileName"></span></div>
-          </div>
-        </div>
-
-        <button class="btn-analyze" id="analyzeBtn" onclick="startResearch()">
-          <span class="btn-text">⚡ Analyze Now</span>
-          <span class="btn-spinner">◌ Processing...</span>
-        </button>
-      </div>
-
-      <!-- History -->
-      <div class="card">
-        <div class="card-label" style="justify-content:space-between;display:flex;align-items:center">
-          <span style="display:flex;align-items:center;gap:8px"><span style="display:block;width:20px;height:1px;background:var(--accent)"></span>History</span>
-          <button onclick="clearHistory()" style="background:none;border:none;color:var(--text-muted);font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace">CLEAR</button>
-        </div>
-        <div class="history-list" id="historyList">
-          <div class="history-empty">No research history yet</div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ── OUTPUT PANEL ── -->
-    <div class="output-panel">
-      <div class="output-header">
-        <div class="output-meta">
-          <span class="output-badge badge-research" id="modeBadge">DEEP RESEARCH</span>
-          <span id="outputTitle" style="font-size:13px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px"></span>
-        </div>
-        <div class="export-bar" id="exportBar" style="display:none">
-          <button class="btn-export" onclick="exportReport('md')">⬇ MD</button>
-          <button class="btn-export" onclick="exportReport('txt')">⬇ TXT</button>
-          <button class="btn-export" onclick="exportReport('pdf')">⬇ PDF</button>
-          <button class="btn-export" onclick="exportReport('docx')">⬇ DOCX</button>
-          <button class="btn-export" onclick="copyToClipboard()" title="Copy markdown">⎘ COPY</button>
-        </div>
-      </div>
-
-      <div class="progress-bar-wrap" id="progressWrap">
-        <div class="progress-bar indeterminate" id="progressBar"></div>
-      </div>
-
-      <!-- Empty state -->
-      <div class="empty-state" id="emptyState">
-        <div class="empty-glyph">🔭</div>
-        <div class="empty-title">Ready to Research</div>
-        <div class="empty-subtitle">Enter any topic, upload a document, or paste a query. MAX will synthesize a comprehensive intelligence report.</div>
-        <div class="feature-pills">
-          <div class="feature-pill">Deep Reports</div>
-          <div class="feature-pill">Paper Analysis</div>
-          <div class="feature-pill">Docs Simplifier</div>
-          <div class="feature-pill">PDF Export</div>
-          <div class="feature-pill">DOCX Export</div>
-        </div>
-      </div>
-
-      <!-- Result card -->
-      <div class="result-card" id="resultCard">
-        <div class="result-topbar">
-          <div class="result-tabs">
-            <button class="tab-btn active" onclick="switchTab('rendered', this)">Rendered</button>
-            <button class="tab-btn" onclick="switchTab('raw', this)">Raw Markdown</button>
-          </div>
-          <div class="result-stats">
-            <div class="stat">Words: <span id="wordCount">0</span></div>
-            <div class="stat">Sections: <span id="sectionCount">0</span></div>
-            <div class="stat">Time: <span id="genTime">—</span></div>
-          </div>
-        </div>
-        <div class="result-body">
-          <div class="prose" id="renderedContent"></div>
-          <pre class="raw-view" id="rawContent"></pre>
-        </div>
-      </div>
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    MAX Research <span>Intelligence Engine</span>
+  </div>
+  <div class="header-right">
+    <div class="search-badge inactive" id="search-badge">
+      <div class="dot"></div>
+      <span id="search-badge-text">Checking search...</span>
     </div>
   </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Analysis Mode</div>
+      <div id="mode-list"></div>
+    </div>
+
+    <div class="input-area">
+      <div class="sidebar-label" style="margin-bottom:0">Topic / Query</div>
+      <textarea id="topic-input" placeholder="Enter your research topic..."></textarea>
+
+      <div id="custom-instruction-wrap">
+        <input type="text" id="custom-instruction" placeholder="Your custom analysis instruction...">
+      </div>
+
+      <div class="file-drop" id="file-drop">
+        <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt,.md">
+        <div class="file-drop-text">
+          <strong>Drop file</strong> or click to upload<br>
+          PDF, DOCX, TXT, MD
+        </div>
+        <div id="file-name"></div>
+      </div>
+
+      <button class="submit-btn" id="submit-btn">
+        <span>⚡</span> Analyze Now
+      </button>
+    </div>
+
+    <div style="padding: 14px 20px 6px; border-bottom: 1px solid var(--border);">
+      <div class="sidebar-label">Recent</div>
+    </div>
+    <div class="history-list" id="history-list"></div>
+
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+
+    <div class="search-progress" id="search-progress">
+      <span class="search-progress-label">🔍 Searching:</span>
+      <div id="search-pills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    </div>
+
+    <div class="status-msg hidden" id="status-msg">
+      <div class="spinner"></div>
+      <span id="status-text">Processing...</span>
+    </div>
+
+    <div class="error-banner" id="error-banner">
+      ⚠️ <span id="error-text"></span>
+    </div>
+
+    <div class="output-tabs">
+      <button class="tab-btn active" id="tab-rendered">Rendered</button>
+      <button class="tab-btn" id="tab-raw">Raw Markdown</button>
+      <div class="tab-right">
+        <button class="icon-btn" id="copy-btn">Copy</button>
+      </div>
+    </div>
+
+    <div class="output-container">
+      <div id="output-rendered" class="active">
+        <div class="empty-state" id="empty-state">
+          <div class="big-icon">⚡</div>
+          <h2>Ready to Research</h2>
+          <p>Pick a mode, enter your topic, and hit Analyze. Web search is handled automatically — no configuration needed.</p>
+        </div>
+        <div class="output-body" id="output-body"></div>
+      </div>
+      <div id="output-raw">
+        <pre id="output-raw-content"></pre>
+      </div>
+    </div>
+
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat">Words: <strong id="stat-words">0</strong></div>
+      <div class="stat">Sections: <strong id="stat-sections">0</strong></div>
+      <div class="stat">Time: <strong id="stat-time">—</strong></div>
+      <div class="stat">Sources: <strong id="stat-sources">—</strong></div>
+    </div>
+
+    <div class="export-bar" id="export-bar">
+      <span class="export-label">Export:</span>
+      <button class="export-btn" data-fmt="md">Markdown</button>
+      <button class="export-btn" data-fmt="txt">Plain Text</button>
+      <button class="export-btn" data-fmt="pdf">PDF</button>
+      <button class="export-btn" data-fmt="docx">Word</button>
+    </div>
+
+  </div>
 </div>
-
-<div class="toast" id="toast"></div>
-
+<script>
+  window.MODES = {{ modes | tojson | safe }};
+</script>
+<script src="/static/script.js"></script>
 <script src="static\script.js"></script>
 </body>
 </html>
