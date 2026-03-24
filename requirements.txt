@@ -7,3 +7,4 @@ markdown
 beautifulsoup4
 requests
 fpdf2
+tavily-python
