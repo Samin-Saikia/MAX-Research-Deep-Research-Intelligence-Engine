@@ -165,19 +165,8 @@ def tavily_search(query, num_results=8):
             query=query,
             max_results=num_results,
             search_depth="advanced",
-            include_answer=True,
         )
         results = []
-
-        # Include the AI-generated answer as an answer_box-style result
-        if response.get("answer"):
-            results.append({
-                "title": "Direct Answer",
-                "snippet": response["answer"],
-                "url": "",
-                "date": "",
-                "type": "answer_box"
-            })
 
         for r in response.get("results", []):
             results.append({

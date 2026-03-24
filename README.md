@@ -39,7 +39,7 @@
 
 MAX Research is not a chatbot. It is a structured research engine. You give it a topic or a document, it searches the web, synthesizes the results, and produces a comprehensive, well-organized report — streamed to your screen in real time as it is generated.
 
-The core pipeline is built around two APIs: **Serper** for live web search and **Groq** for fast language model inference. These two are deliberately separated. Serper fetches current, accurate information from the web. Groq's `llama-3.3-70b-versatile` model synthesizes that information into a structured report. This separation is what makes the system stable and predictable — there are no internal tool calls mid-generation, no mystery freezes, no unreliable compound model behavior.
+The core pipeline is built around web search and **Groq** for fast language model inference. The app supports two search providers — **Serper** and **Tavily** — which can be used individually or together. A search dispatcher selects the active provider based on available API keys or the `SEARCH_PROVIDER` env var. The search layer fetches current, accurate information from the web. Groq's `llama-3.3-70b-versatile` model synthesizes that information into a structured report. This separation is what makes the system stable and predictable — there are no internal tool calls mid-generation, no mystery freezes, no unreliable compound model behavior.
 
 Every report is structured. Every mode produces output with defined sections, not walls of unorganized prose. Reports can be exported immediately as Markdown, plain text, PDF, or Word — without copy-pasting.
 
@@ -65,7 +65,7 @@ Every report is structured. Every mode produces output with defined sections, no
 User submits topic
         │
         ▼
-Serper API fires 2–4 targeted search queries
+Search dispatcher fires 2–4 targeted queries via Serper and/or Tavily
         │
         ▼
 Results collected, deduplicated, formatted as context block
@@ -181,6 +181,8 @@ Create a `.env` file in the project root:
 ```env
 GROQ_API_KEY=your_groq_api_key_here
 SERPER_API_KEY=your_serper_api_key_here
+TAVILY_API_KEY=your_tavily_api_key_here
+SEARCH_PROVIDER=auto
 FLASK_SECRET_KEY=any_random_string_for_sessions
 ```
 
@@ -188,9 +190,11 @@ FLASK_SECRET_KEY=any_random_string_for_sessions
 |---|---|---|
 | `GROQ_API_KEY` | Yes | [console.groq.com](https://console.groq.com) — free |
 | `SERPER_API_KEY` | No | [serper.dev](https://serper.dev) — free tier: 2,500/month |
+| `TAVILY_API_KEY` | No | [app.tavily.com](https://app.tavily.com) — free tier: 1,000 credits/month |
+| `SEARCH_PROVIDER` | No | `serper`, `tavily`, `both`, or blank for auto-detect based on which keys are present |
 | `FLASK_SECRET_KEY` | No | Any random string; defaults to `dev-secret-key` |
 
-> **Note on Serper:** If `SERPER_API_KEY` is missing or left blank, the app still works — web search is simply skipped and the model uses its training knowledge only. The header badge will show **No Web Search** in red to indicate this.
+> **Note on search:** The app supports two search providers — Serper and Tavily. If neither key is set, web search is skipped and the model uses its training knowledge only. The header badge will show **No Web Search** in red. If at least one key is set, search is active and the badge shows which provider(s) are in use. Set `SEARCH_PROVIDER` to force a specific provider, or leave it blank to auto-detect.
 
 > **Never commit `.env` to Git.** It is already listed in `.gitignore`.
 
@@ -366,11 +370,11 @@ Returns all mode definitions.
 ---
 
 ### `GET /api/search-status`
-Returns whether Serper is configured.
+Returns which search providers are configured.
 
 **Response:**
 ```json
-{ "serper_enabled": true }
+{ "serper_enabled": true, "tavily_enabled": false, "search_provider": "auto" }
 ```
 
 ---
@@ -429,6 +433,8 @@ Exports a finished report.
 |---|---|
 | `MODES` dict | Stores all mode metadata and system prompts |
 | `serper_search()` | Calls Serper API, handles knowledge graph, answer box, organic results |
+| `tavily_search()` | Calls Tavily API with advanced search depth, normalises to shared result schema |
+| `web_search()` | Dispatcher — routes to Serper, Tavily, or both based on config and available keys |
 | `build_search_queries()` | Generates mode-specific query sets |
 | `format_search_context()` | Deduplicates results, formats as structured context block |
 | `extract_text_from_file()` | PDF, DOCX, TXT, MD extraction |
@@ -475,7 +481,7 @@ submitResearch()
 
 | Feature | Description |
 |---|---|
-| Search badge | Green if Serper active, red if not |
+| Search badge | Green if any search provider is active (shows which), red if none configured |
 | Search pills | One per query — blue while searching, green with count when done |
 | Status messages | Contextual updates between search and generation phases |
 | Live streaming | Tokens appear as generated with a blinking cursor |
@@ -495,7 +501,7 @@ submitResearch()
 Your `GROQ_API_KEY` is wrong, missing, or has trailing whitespace. Verify it in the Groq console.
 
 **Search badge shows red**
-`SERPER_API_KEY` is missing from `.env`. The app still works without it — search is just skipped.
+Neither `SERPER_API_KEY` nor `TAVILY_API_KEY` is set in `.env`. The app still works without them — search is just skipped.
 
 **`ImportError: No module named X`**
 Run `pip install -r requirements.txt` again in the correct Python environment.
