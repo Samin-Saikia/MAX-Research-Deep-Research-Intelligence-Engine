@@ -60,9 +60,11 @@ async function checkSearchStatus() {
     const d = await r.json();
     const badge = document.getElementById('search-badge');
     const text = document.getElementById('search-badge-text');
-    if (d.serper_enabled) {
+    if (d.serper_enabled || d.tavily_enabled) {
       badge.className = 'search-badge active';
-      text.textContent = 'Web Search Active';
+      const provider = d.serper_enabled && d.tavily_enabled ? 'Serper + Tavily'
+        : d.tavily_enabled ? 'Tavily' : 'Serper';
+      text.textContent = 'Web Search Active (' + provider + ')';
     } else {
       badge.className = 'search-badge inactive';
       text.textContent = 'No Web Search';

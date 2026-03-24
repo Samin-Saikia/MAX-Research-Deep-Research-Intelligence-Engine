@@ -8,6 +8,7 @@ from io import BytesIO
 from flask import Flask, request, jsonify, render_template, send_file, Response, stream_with_context
 from dotenv import load_dotenv
 from groq import Groq
+from tavily import TavilyClient
 import PyPDF2
 import docx
 
@@ -18,6 +19,10 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 SERPER_API_KEY = os.getenv("SERPER_API_KEY")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+SEARCH_PROVIDER = os.getenv("SEARCH_PROVIDER", "").lower()  # 'serper', 'tavily', 'both', or '' (auto-detect)
+
+tavily_client = TavilyClient(api_key=TAVILY_API_KEY) if TAVILY_API_KEY else None
 
 # Fast, stable model — no compound/web-search model, we handle search ourselves
 MODEL = "llama-3.3-70b-versatile"
@@ -147,6 +152,74 @@ def serper_search(query, num_results=8):
     except Exception as e:
         print(f"[Serper Error] {e}")
         return []
+
+
+# ─── Tavily Search ───────────────────────────────────────────────────────────
+
+def tavily_search(query, num_results=8):
+    """Fetch web search results from Tavily API, normalised to the same schema as serper_search()."""
+    if not tavily_client:
+        return []
+    try:
+        response = tavily_client.search(
+            query=query,
+            max_results=num_results,
+            search_depth="advanced",
+        )
+        results = []
+
+        for r in response.get("results", []):
+            results.append({
+                "title": r.get("title", ""),
+                "snippet": r.get("content", ""),
+                "url": r.get("url", ""),
+                "date": r.get("published_date", ""),
+                "type": "organic"
+            })
+
+        return results[:num_results]
+    except Exception as e:
+        print(f"[Tavily Error] {e}")
+        return []
+
+
+# ─── Search Dispatcher ───────────────────────────────────────────────────────
+
+def web_search(query, num_results=8):
+    """Route search to serper, tavily, or both based on config and available keys."""
+    provider = SEARCH_PROVIDER
+
+    # Auto-detect when no explicit provider is set
+    if not provider:
+        if TAVILY_API_KEY and SERPER_API_KEY:
+            provider = "both"
+        elif TAVILY_API_KEY:
+            provider = "tavily"
+        elif SERPER_API_KEY:
+            provider = "serper"
+        else:
+            return []
+
+    if provider == "tavily":
+        return tavily_search(query, num_results)
+    elif provider == "serper":
+        return serper_search(query, num_results)
+    elif provider == "both":
+        serper_results = serper_search(query, num_results)
+        tavily_results = tavily_search(query, num_results)
+        # Merge, dedup by URL, prefer serper ordering first
+        seen_urls = set()
+        merged = []
+        for r in serper_results + tavily_results:
+            url = r.get("url", "")
+            key = url if url else r.get("snippet", "")[:80]
+            if key not in seen_urls:
+                seen_urls.add(key)
+                merged.append(r)
+        return merged[:num_results]
+    else:
+        # Unknown provider value, fall back to serper
+        return serper_search(query, num_results)
 
 
 def build_search_queries(mode, topic, custom_instruction=None):
@@ -682,8 +755,12 @@ def get_modes():
 
 @app.route('/api/search-status')
 def search_status():
-    """Let the frontend know if Serper is configured."""
-    return jsonify({"serper_enabled": bool(SERPER_API_KEY)})
+    """Let the frontend know which search providers are configured."""
+    return jsonify({
+        "serper_enabled": bool(SERPER_API_KEY),
+        "tavily_enabled": bool(TAVILY_API_KEY),
+        "search_provider": SEARCH_PROVIDER or "auto"
+    })
 
 
 @app.route('/api/research/stream', methods=['POST'])
@@ -712,12 +789,13 @@ def research_stream():
             search_context = ""
             results_by_query = {}
 
-            if SERPER_API_KEY and mode != "docs_simplifier" or (mode == "docs_simplifier" and not file_content):
+            search_available = SERPER_API_KEY or TAVILY_API_KEY
+            if search_available and mode != "docs_simplifier" or (mode == "docs_simplifier" and not file_content):
                 queries = build_search_queries(mode, topic, custom_instruction)
                 yield f"data: {json.dumps({'type': 'status', 'message': 'Searching the web...', 'queries': queries})}\n\n"
 
                 for q in queries:
-                    results = serper_search(q, num_results=6)
+                    results = web_search(q, num_results=6)
                     results_by_query[q] = results
                     yield f"data: {json.dumps({'type': 'search_done', 'query': q, 'count': len(results)})}\n\n"
 
